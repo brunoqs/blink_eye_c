@@ -309,7 +309,7 @@ bool detect_and_draw( IplImage* img,CvHaarClassifierCascade* cascade )
             // Draw the rectangle in the input image
             cvRectangle( img, pt1, pt2, CV_RGB(255,0,0), 3, 8, 0 );
 
-	  cv::Mat image(img);
+	  Mat image = cv::cvarrToMat(img);
 	  cv::Rect rect;
 
 	  rect = cv::Rect(pt1.x,pt1.y,(pt2.x-pt1.x),(pt2.y-pt1.y));
