@@ -6,7 +6,7 @@
 
    ISSUES
    1. ESP12E error encountered: the board needs more than 100mA to use SPIFFS, otherwise the watchdog timer will reset it
-   2. STACK
+   2. STACK was overflowing because of many functions calls
 
    IDEAS:
    https://gist.github.com/dogrocker/f998dde4dbac923c47c1 (Webserver running on AP mode to set ssid and pass to STA mode)
@@ -19,6 +19,7 @@
 #include <ArduinoJson.h>
 
 #define inp 5
+#define id 1
 
 #ifdef ESP8266
 extern "C" {
@@ -62,11 +63,9 @@ void _writeLog(String time, bool isConnected = true) {
   if (!rFile) {
     _DEBUG(F("Error! Failed to open file!"));
   } else {
-
     //rFile.println(buf);
   }
   rFile.close();
-  _DEBUG(F("CHEGOU AQUI TAMBÉM"));
 }
 
 String _readLog() {
@@ -77,7 +76,7 @@ String _readLog() {
     rFile = SPIFFS.open("/log.dat", "r");
     delay(100);
   }
-  _DEBUG(F("File was found!"));
+  //_DEBUG(F("File was found!"));
   //_DEBUG(F("Reading file..."));
   while (rFile.available()) {
     String line = rFile.readStringUntil('\n');
@@ -85,6 +84,7 @@ String _readLog() {
     buf += "<br/>";
     yield();
   }
+  _DEBUG(buf);
   rFile.close();
   return buf;
 }
@@ -138,11 +138,12 @@ void interrupt() {
   if (WiFi.status() == WL_CONNECTED)_sendToServer();
   else {
     //_writeLog(String(millis()), false);
-    StaticJsonBuffer<100> jsonBuffer;
+    StaticJsonBuffer<500> jsonBuffer;
     //DynamicJsonBuffer jsonBuffer(150);
     JsonObject& root = jsonBuffer.createObject();
     root["time"] = String(millis());
     root["isConnected"] = 0;
+    root["id"] = id;
     String buf;
     root.printTo(buf);
     _DEBUG(buf);
@@ -190,7 +191,8 @@ void _scanWifi() {
 
 void loop() {
   noInterrupts();
-  _readLog();
+  //_readLog();
+  delay(100);
   interrupts();
   delay(2000);
 }
