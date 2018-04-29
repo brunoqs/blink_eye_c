@@ -85,7 +85,7 @@ void loop() {
       _DEBUG("Falha na conexao com o site ");
       return;
     }
-    String url = "GET /edal/teste.php?" + json + " HTTP/1.1";
+    String url = "GET /edal/teste.php?data=" + json + " HTTP/1.1";
     client.println(url);
     client.println("Host: 192.168.0.105");
     client.println("Connection: close");
@@ -99,6 +99,6 @@ void loop() {
     _readLog();
   }
   
-  _readLog();
-  delay(1000);
+  //_readLog();
+  //  delay(1000);
 }
