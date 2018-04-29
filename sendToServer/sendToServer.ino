@@ -3,6 +3,9 @@
    Connect to a public network, wait for a HIGH pulse from DE10-nano on an interrupt pin and send it to a extern server
    The system will check if some data wasn't sent since last startup and try to resend
 
+   TODO:
+   Send offline logs to server in a loop
+   Add bootstrap 
 
    ISSUES
    1. ESP12E error encountered: the board needs more than 100mA to use SPIFFS, otherwise the watchdog timer will reset it
