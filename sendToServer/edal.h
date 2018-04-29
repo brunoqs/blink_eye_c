@@ -4,6 +4,8 @@
 #include <ArduinoJson.h>
 #include <WiFiClient.h>
 
+#define inp 5
+#define id 1
 #define _DEBUG(x) Serial.println(x)
 
 #ifdef ESP8266
@@ -16,4 +18,4 @@ void _createLog();
 void _writeLog(String, bool);
 String _readLog();
 unsigned long _getNTP();
-void _sendToServer(unsigned long, unsigned long);
+String  _sendToServer(unsigned long, unsigned long);

@@ -77,7 +77,7 @@ unsigned long _getNTP() {
   return 0;
 }
 
-void _sendToServer(unsigned long _baseMillis, unsigned long _initialTime) {
+String _sendToServer(unsigned long _baseMillis, unsigned long _initialTime) {
   unsigned long _actualTime = (millis() - _baseMillis)/1000 + _initialTime;
   _DEBUG(_actualTime);
   
@@ -91,30 +91,20 @@ void _sendToServer(unsigned long _baseMillis, unsigned long _initialTime) {
   String secondStr = seconds < 10 ? "0" + String(seconds) : String(seconds);
   
   _DEBUG(hoursStr + ":" + minuteStr + ":" + secondStr);
-  const char http_site[] = "http://localhost/";
+  //const char http_site[] = "http://localhost/";
   const int http_port = 80;
 
-  WiFiClient client;
-  IPAddress server(192,168,0,108);
+  StaticJsonBuffer<500> jsonBuffer;
+  JsonObject& root = jsonBuffer.createObject();
+
+  root["time"] = hoursStr + ":" + minuteStr + ":" + secondStr ;
+  root["isConnected"] = 1;
+  root["id"] = id;
+  String buf;
+  root.printTo(buf);
+  _DEBUG(buf);
   
-  if ( !client.connect(server, http_port) ) {
-    Serial.println("Falha na conexao com o site ");
-    return;
-  }
-  
-  String buf = "Test";
-  String param = "?dt=" + String(buf);
-  client.println("GET /teste.php" + param + " HTTP/1.1");
-  client.println("Host: ");
-  client.println(http_site);
-  client.println("Connection: close");
-  client.println();
-  client.println();
- 
-  while(client.available()){
-    String line = client.readStringUntil('\r');
-    Serial.print(line);
-  }    
+  return buf;
 }
 
 

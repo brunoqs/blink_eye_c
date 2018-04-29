@@ -15,11 +15,14 @@
 #include "ESP8266WiFi.h"
 #include "edal.h"
 
-#define inp 5
-#define id 1
+WiFiClient client;
+IPAddress server(192,168,0,105);
+const int http_port = 80;
 
 unsigned long _initialTime;
 unsigned long _baseMillis;
+
+String json = "0";
 
 void interrupt();
 
@@ -30,6 +33,11 @@ void setup() {
   Serial.begin(115200);
   Serial.setDebugOutput(1);
 
+  WiFi.mode(WIFI_STA);
+  WiFi.begin("Rep_ABate_Caverma","tilasesujos69");
+  delay(50);
+  _DEBUG(WiFi.localIP());  
+  
   pinMode(inp, INPUT);
   attachInterrupt(digitalPinToInterrupt(inp), interrupt, RISING);
 
@@ -40,16 +48,14 @@ void setup() {
   //SPIFFS.format();
   _createLog();
   // Check if already exists data in SPIFSS and send to server
-  if (_readLog().length() == 0) _sendToServer(_baseMillis, _initialTime);
-
-  WiFi.mode(WIFI_STA);
-  WiFi.disconnect();
-  delay(100);
+  if (_readLog().length() == 0); // _sendToServer(_baseMillis, _initialTime);
 }
 
 void interrupt() {
   Serial.print("interrupt!");
-  if (WiFi.status() == WL_CONNECTED)_sendToServer(_baseMillis, _initialTime);
+  if (WiFi.status() == WL_CONNECTED){
+  json = _sendToServer(_baseMillis, _initialTime);
+  }
   else {
     //_writeLog(String(millis()), false);
     StaticJsonBuffer<500> jsonBuffer;
@@ -70,42 +76,29 @@ void interrupt() {
     rFile.close();
     //_readLog();
     //_scanWifi();
-    WiFi.begin("Rep_ABate_Caverma","tilasesujos69");
-    _DEBUG(WiFi.localIP());  
-  }
-}
-
-
-void _connect(char* ssid) {
-  //WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid);
-  int time_init = millis();
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    _DEBUG(".");
-    if (millis() - time_init > 10000)return;
-  }
-  _DEBUG(WiFi.localIP());
-}
-
-void _scanWifi(uint8_t mode) {
-  uint8_t n = WiFi.scanNetworks();
-  for (uint8_t i = 0; i < n; i++) {
-    /*Serial.print(WiFi.SSID(i));
-      Serial.print("  ");
-      _DEBUG(WiFi.RSSI(i));*/
-    if (WiFi.encryptionType(i) == ENC_TYPE_NONE) {
-      char* buf;
-      WiFi.SSID(i).toCharArray(buf, WiFi.SSID(i).length());
-      _connect(buf);
-    }
   }
 }
 
 void loop() {
-  //noInterrupts();
-  //_readLog();
-  //delay(100);
-  //interrupts();
-  //delay(2000);
+  if(json != "0"){
+    if ( !client.connect(server, http_port) ){
+      _DEBUG("Falha na conexao com o site ");
+      return;
+    }
+    String url = "GET /edal/teste.php?" + json + " HTTP/1.1";
+    client.println(url);
+    client.println("Host: 192.168.0.105");
+    client.println("Connection: close");
+    client.println();
+    
+    while(client.available()){
+      String line = client.readStringUntil('\r');
+      _DEBUG(line);
+    }     
+    json = "0";
+    _readLog();
+  }
+  
+  _readLog();
+  delay(1000);
 }
