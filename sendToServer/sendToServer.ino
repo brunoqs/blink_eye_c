@@ -17,6 +17,7 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 #include <ArduinoJson.h>
+#include <WiFiClient.h>
 
 #define inp 5
 #define id 1
@@ -28,7 +29,8 @@ extern "C" {
 #define _DEBUG(x) Serial.println(x)
 #endif
 
-
+unsigned long _initialTime;
+unsigned long _baseMillis;
 
 void interrupt();
 
@@ -89,7 +91,7 @@ String _readLog() {
   return buf;
 }
 
-String _ntpInit() {
+unsigned long _getNTP() {
   WiFiUDP ntpUDP;
   int16_t utc = -2; //UTC -3:00 Brazil
   uint32_t currentMillis = 0;
@@ -100,15 +102,51 @@ String _ntpInit() {
   currentMillis = millis();
   if (currentMillis - previousMillis > 1000) {
     previousMillis = currentMillis;
-    printf("Time Epoch: %d: ", timeClient.getEpochTime());
-    _DEBUG(timeClient.getFormattedTime());
+    return timeClient.getEpochTime();
+    //_DEBUG(timeClient.getFormattedTime());
   }
-  return timeClient.getFormattedTime();
+  timeClient.end();
+  return 0;
 }
 
 void _sendToServer() {
+  unsigned long _actualTime = (millis() - _baseMillis)/1000 + _initialTime;
+  _DEBUG(_actualTime);
+  
+  unsigned long hours = (_actualTime % 86400L) / 3600 - 1;
+  String hoursStr = hours < 10 ? "0" + String(hours) : String(hours);
 
-  ;
+  unsigned long minutes = (_actualTime % 3600) / 60;
+  String minuteStr = minutes < 10 ? "0" + String(minutes) : String(minutes);
+
+  unsigned long seconds = _actualTime % 60;
+  String secondStr = seconds < 10 ? "0" + String(seconds) : String(seconds);
+  
+  _DEBUG(hoursStr + ":" + minuteStr + ":" + secondStr);
+  const char http_site[] = "http://localhost/";
+  const int http_port = 80;
+
+  WiFiClient client;
+  IPAddress server(192,168,0,108);
+  
+  if ( !client.connect(server, http_port) ) {
+    Serial.println("Falha na conexao com o site ");
+    return;
+  }
+  
+  String buf = "Test";
+  String param = "?dt=" + String(buf);
+  client.println("GET /teste.php" + param + " HTTP/1.1");
+  client.println("Host: ");
+  client.println(http_site);
+  client.println("Connection: close");
+  client.println();
+  client.println();
+ 
+  while(client.available()){
+    String line = client.readStringUntil('\r');
+    Serial.print(line);
+  }    
 }
 
 void setup() {
@@ -122,11 +160,13 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(inp), interrupt, RISING);
 
   _DEBUG("Initializing file system...");
+  _initialTime = _getNTP();
+  _baseMillis = millis();
   SPIFFS.begin();
   //SPIFFS.format();
   _createLog();
-  if (_readLog().length() == 0) _sendToServer();
   // Check if already exists data in SPIFSS and send to server
+  if (_readLog().length() == 0) _sendToServer();
 
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
@@ -156,9 +196,11 @@ void interrupt() {
     rFile.close();
     //_readLog();
     //_scanWifi();
-    
+    WiFi.begin("Rep_ABate_Caverma","tilasesujos69");
+    _DEBUG(WiFi.localIP());  
   }
 }
+
 
 void _connect(char* ssid) {
   //WiFi.mode(WIFI_STA);
@@ -169,13 +211,10 @@ void _connect(char* ssid) {
     _DEBUG(".");
     if (millis() - time_init > 10000)return;
   }
-  /*_DEBUG("");
-    _DEBUG("WiFi connected");
-    _DEBUG("IP address: ");*/
   _DEBUG(WiFi.localIP());
 }
 
-void _scanWifi() {
+void _scanWifi(uint8_t mode) {
   uint8_t n = WiFi.scanNetworks();
   for (uint8_t i = 0; i < n; i++) {
     /*Serial.print(WiFi.SSID(i));
@@ -190,9 +229,9 @@ void _scanWifi() {
 }
 
 void loop() {
-  noInterrupts();
+  //noInterrupts();
   //_readLog();
-  delay(100);
-  interrupts();
-  delay(2000);
+  //delay(100);
+  //interrupts();
+  //delay(2000);
 }
