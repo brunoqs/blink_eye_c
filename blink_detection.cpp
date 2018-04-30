@@ -565,7 +565,7 @@ int main(int argc, char** argv){
     storage = cvCreateMemStorage(0);
 
     // resolution
-    capture = cvCaptureFromCAM(1);
+    capture = cvCaptureFromCAM(0);
     cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, 800);
     cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, 800);
     // Create a new named window with title: result
