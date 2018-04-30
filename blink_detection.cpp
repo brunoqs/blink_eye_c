@@ -3,8 +3,7 @@
 
 // includes for blink_detection
 #include "cv.h"
-#include "highgui.h" 
-
+#include "highgui.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,28 +14,17 @@
 #include <time.h>
 #include <ctype.h>
 #include <iostream>
-
 #include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
-
 // includes do templateMatch opencv
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/core/internal.hpp"
-#include <math.h>
-#include <assert.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <limits.h>
-#include <float.h>
 
 using namespace cv;
 
 // funcoes retiradas do opencv
-void crossCor( const Mat& img, const Mat& _templ, Mat& corr,
-                Size corrsize, int ctype,
-                Point anchor, double delta, int borderType )
+void crossCor( const Mat& img, const Mat& _templ, Mat& corr,Size corrsize, int ctype, Point anchor, double delta, int borderType )
 {
     const double blockScale = 4.5;
     const int minBlockSize = 256;
@@ -217,8 +205,6 @@ void crossCor( const Mat& img, const Mat& _templ, Mat& corr,
     }
 }
 
-
-
 /*****************************************************************************************/
 
 void matchTemp( InputArray _img, InputArray _templ, OutputArray _result, int method )
@@ -365,7 +351,6 @@ void matchTemp( InputArray _img, InputArray _templ, OutputArray _result, int met
     }
 }
 
-
 // Create memory for calculations
 static CvMemStorage* storage = 0;
 
@@ -390,9 +375,7 @@ int const max_BINARY_value = 255;
 int hough_thr = 35;
 cv::Mat src_gray, dst;
 
-using namespace cv;
-
-Mat img1; Mat img2; Mat templ; Mat result;
+Mat img1; Mat img2; Mat img3; Mat img4; Mat img5; Mat img6; Mat img7; Mat img8; Mat templ; Mat result;
 const char* image_window = "Source Image";
 const char* result_window = "Result window";
 
@@ -401,13 +384,7 @@ int max_Trackbar = 5;
 
 int eye_open=0;
 int eye_close=0;
-/*
-**
- * @function MatchingMethod
- * @brief Trackbar callback
- 
-*/
-
+int sleep = 0;
 //Matching with 2 images ,eye closed or open
 void MatchingMethod(cv::Mat templ,int id){
   /// Source image to display
@@ -431,21 +408,27 @@ void MatchingMethod(cv::Mat templ,int id){
   cv::minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
 
   ///Justing checkin the match template value reaching the threashold
-  if(id == 0 && (minVal < 0)){
-    eye_open = eye_open + 1;
-    if(eye_open == 10){
-      std::cout<<"Eye Open"<<std::endl;
-      eye_open=0;
-      eye_close=0;
+    if(id == 0 && (minVal < 0)){
+        eye_open = eye_open + 1;
+        if(eye_open == 10){
+            std::cout<<"Eye Open"<<std::endl;
+            eye_open=0;
+            eye_close=0;
+            sleep= 0;
+        }
     }
-  }
   else if(id == 1 && (minVal < 0))
 	eye_close=eye_close+1;
-  if(eye_close == 10){
+  if(eye_close >= 15){
     std::cout<<"Eye Closed"<<std::endl;
+    eye_open=0;
     eye_close=0;
-    system("python send_arduino.py");
-  }
+    sleep++;
+    if (sleep == 3){
+        std::cout << "Dormindo"<<std::endl;
+        sleep = 0;
+    }
+}
 
   /// For SQDIFF and SQDIFF_NORMED, the best matches are lower values. For all the other methods, the higher the better
   if( match_method  == CV_TM_SQDIFF || match_method == CV_TM_SQDIFF_NORMED ){
@@ -465,13 +448,77 @@ void MatchingMethod(cv::Mat templ,int id){
 
 
 void detect_blink(cv::Mat roi){
-	try{  	
-       MatchingMethod(img1, 0);
-       MatchingMethod(img2, 1);
-    }
+    try{
+                MatchingMethod(img1, 0);
+                MatchingMethod(img2, 1);
+                MatchingMethod(img3, 0);
+                MatchingMethod(img4, 1);
+                MatchingMethod(img5, 0);
+                MatchingMethod(img6, 1);
+                MatchingMethod(img7, 0);
+                MatchingMethod(img8, 1);
+        }
     catch(cv::Exception& e){
-      std::cout << "An exception occued" << std::endl;
+            std::cout << "An exception occued" << std::endl;
     }
+}
+
+// Function to detect and draw any faces that is present in an image
+bool detect_and_draw( IplImage* img,CvHaarClassifierCascade* cascade )
+{
+    int scale = 1;
+
+    // Create a new image based on the input image
+    IplImage* temp = cvCreateImage( cvSize(img->width/scale,img->height/scale), 8, 3 );
+
+    // Create two points to represent the face locations
+    CvPoint pt1, pt2;
+    int i;
+
+    // Clear the memory storage which was used before
+    cvClearMemStorage( storage );
+
+    // Find whether the cascade is loaded, to find the faces. If yes, then:
+    if( cascade )
+    {
+        // There can be more than one face in an image. So create a growable sequence of faces.
+        // Detect the objects and store them in the sequence
+        CvSeq* faces = cvHaarDetectObjects( img, cascade, storage,1.1, 8, CV_HAAR_DO_CANNY_PRUNING,cvSize(40, 40) );
+
+        // Loop the number of faces found.
+        for( i = 0; i < (faces ? faces->total : 0); i++ )
+        {
+            // Create a new rectangle for drawing the face
+            CvRect* r = (CvRect*)cvGetSeqElem( faces, i );
+
+            // Find the dimensions of the face,and scale it if necessary
+            pt1.x = r->x*scale;
+            pt2.x = (r->x+r->width)*scale;
+            pt1.y = r->y*scale;
+            pt2.y = (r->y+r->height)*scale;
+
+            // Draw the rectangle in the input image
+            cvRectangle( img, pt1, pt2, CV_RGB(255,0,0), 3, 8, 0 );
+
+            Mat image = cv::cvarrToMat(img);
+            cv::Rect rect;
+
+            rect = cv::Rect(pt1.x,pt1.y,(pt2.x-pt1.x),(pt2.y-pt1.y));
+
+            roiImg = image(rect);
+            cv::imshow("roi",roiImg);
+
+            detect_blink(roiImg);
+        }
+    }
+    // Show the image in the window named "result"
+    cvShowImage( "original_frame", img );
+    if(i  > 0)
+        return 1;
+    else
+        return 0;
+    // Release the temp image created.
+    cvReleaseImage( &temp );
 }
 
 // Main function, defines the entry point for the program.
@@ -499,19 +546,25 @@ int main(int argc, char** argv){
 
     img1 = imread(argv[1], 1);
     img2 = imread(argv[2], 1);
+    img3 = imread(argv[3], 1);
+    img4 = imread(argv[4], 1);
+    img5 = imread(argv[5], 1);
+    img6 = imread(argv[6], 1);
+    img7 = imread(argv[7], 1);
+    img8 = imread(argv[8], 1);
 
     // Load the HaarClassifierCascade
     /// Create windows
-    cv::namedWindow(image_window, CV_WINDOW_AUTOSIZE);
-    cv::namedWindow(result_window, CV_WINDOW_AUTOSIZE);
+    //cv::namedWindow(image_window, CV_WINDOW_AUTOSIZE);
+    //cv::namedWindow(result_window, CV_WINDOW_AUTOSIZE);
 
     // Allocate the memory storage
     storage = cvCreateMemStorage(0);
 
-    // resolution 
+    // resolution
     capture = cvCaptureFromCAM(0);
-    cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, 100);
-    cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, 100);
+    cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, 600);
+    cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, 600);
     // Create a new named window with title: result
     cvNamedWindow("original_frame", 1);
 
@@ -531,11 +584,11 @@ int main(int argc, char** argv){
                 frame_copy = cvCreateImage(cvSize(frame->width,frame->height),
                 IPL_DEPTH_8U, frame->nChannels);
             }
-            // Check the origin of image. If top left, copy the image frame to frame_copy. 
+            // Check the origin of image. If top left, copy the image frame to frame_copy.
             if(frame->origin == IPL_ORIGIN_TL) cvCopy(frame, frame_copy, 0);
             // Else flip and copy the image
 
-            //for(int i = 0; i < 1; i++){
+            for(int i = 0; i < 1; i++){
                 cascade = (CvHaarClassifierCascade*)cvLoad( cascade_name[0], 0, 0, 0 );
 
      	        // Check whether the cascade has loaded successfully. Else report and error and quit
@@ -544,8 +597,9 @@ int main(int argc, char** argv){
                     return -1;
                 }
                 // Call the function to detect and draw the face
+
                 detect_and_draw(frame_copy, cascade);
-            //}
+            }
             // Wait for a while before proceeding to the next frame
             if(cvWaitKey(1) >= 0) break;
         }
@@ -557,79 +611,4 @@ int main(int argc, char** argv){
         cvReleaseMemStorage(&storage);
     }
     return 0;
-}
-
-// Function to detect and draw any faces that is present in an image
-bool detect_and_draw( IplImage* img,CvHaarClassifierCascade* cascade )
-{
-    int scale = 1;
-
-    // Create a new image based on the input image
-    IplImage* temp = cvCreateImage( cvSize(img->width/scale,img->height/scale), 8, 3 );
-
-    // Create two points to represent the face locations
-    CvPoint pt1, pt2;
-    int i;
-
-    // Clear the memory storage which was used before
-    cvClearMemStorage( storage );
-
-    // Find whether the cascade is loaded, to find the faces. If yes, then:
-    if( cascade )
-    {
-
-        // There can be more than one face in an image. So create a growable sequence of faces.
-        // Detect the objects and store them in the sequence
-        CvSeq* faces = cvHaarDetectObjects( img, cascade, storage,
-            1.1, 8, CV_HAAR_DO_CANNY_PRUNING,
-            cvSize(40, 40) );
-
-        // Loop the number of faces found.
-        for( i = 0; i < (faces ? faces->total : 0); i++ )
-        {
-           // Create a new rectangle for drawing the face
-            CvRect* r = (CvRect*)cvGetSeqElem( faces, i );
-
-            // Find the dimensions of the face,and scale it if necessary
-            pt1.x = r->x*scale;
-            pt2.x = (r->x+r->width)*scale;
-            pt1.y = r->y*scale;
-            pt2.y = (r->y+r->height)*scale;
-
-            // Draw the rectangle in the input image
-            cvRectangle( img, pt1, pt2, CV_RGB(255,0,0), 3, 8, 0 );
-
-            Mat image = cv::cvarrToMat(img);
-            cv::Rect rect;
-
-            rect = cv::Rect(pt1.x,pt1.y,(pt2.x-pt1.x),(pt2.y-pt1.y));
-
-            roiImg = image(rect);
-            cv::imshow("roi",roiImg);	
-
-
-///Send to arduino
-
-            detect_blink(roiImg);
-
-        }
-    }
-
-
-    // Show the image in the window named "result"
-    cvShowImage( "original_frame", img );
-
-
-    if(i  > 0)
-      return 1;
-  else
-      return 0;
-
-
-    // Release the temp image created.
-
-
-  cvReleaseImage( &temp );
-
-
 }
