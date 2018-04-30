@@ -1,0 +1,1 @@
+./blink_detect cima_aberto.jpg cima_fechado.jpg direito_aberto.jpg direito_fechado.jpg esquerdo_aberto.jpg esquerdo_fechado.jpg reto_aberto.jpg reto_fechado.jpg

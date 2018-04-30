@@ -385,6 +385,8 @@ int max_Trackbar = 5;
 int eye_open=0;
 int eye_close=0;
 int sleep = 0;
+int conto=0;
+int contc=0;
 //Matching with 2 images ,eye closed or open
 void MatchingMethod(cv::Mat templ,int id){
   /// Source image to display
@@ -411,21 +413,23 @@ void MatchingMethod(cv::Mat templ,int id){
     if(id == 0 && (minVal < 0)){
         eye_open = eye_open + 1;
         if(eye_open == 10){
-            std::cout<<"Eye Open"<<std::endl;
+            std::cout<<conto<<" Eye Open"<<std::endl;
             eye_open=0;
             eye_close=0;
             sleep= 0;
+            conto++;
         }
     }
   else if(id == 1 && (minVal < 0))
 	eye_close=eye_close+1;
-  if(eye_close >= 15){
-    std::cout<<"Eye Closed"<<std::endl;
+  if(eye_close == 10){
+    std::cout<<contc<< " Eye Closed"<<std::endl;
     eye_open=0;
     eye_close=0;
     sleep++;
+    contc++;
     if (sleep == 3){
-        std::cout << "Dormindo"<<std::endl;
+        std::cout <<"Dormindo"<<std::endl;
         sleep = 0;
     }
 }
@@ -441,7 +445,7 @@ void MatchingMethod(cv::Mat templ,int id){
   cv::rectangle(img_display, matchLoc, Point(matchLoc.x + templ.cols, matchLoc.y + templ.rows), Scalar::all(0), 2, 8, 0 );
   cv::rectangle(result, matchLoc, Point(matchLoc.x + templ.cols, matchLoc.y + templ.rows), Scalar::all(0), 2, 8, 0);
 
-  cv::imshow(image_window, img_display);
+  cv::imshow(image_window, img_display);	
   cv::imshow(result_window, result);
 
 }
@@ -523,14 +527,14 @@ bool detect_and_draw( IplImage* img,CvHaarClassifierCascade* cascade )
 
 // Main function, defines the entry point for the program.
 int main(int argc, char** argv){
-    if(argc <= 1){
+    /*if(argc <= 1){
        std::cout << "\n Help " << std::endl;
        std::cout << "\n ------------------------------------\n" << std::endl;
        std::cout << "./blink_detect open_eye.jpg close_eye.jpg\n" << std::endl;
        std::cout << "Eg :: ./blink_detect 2.jpg 3.jpg\n" << std::endl;
        std::cout << "\n ------------------------------------\n" << std::endl;
        exit(0);
-    }
+    }*/
 
     // Structure for getting video from camera or avi
     CvCapture* capture = 0;
@@ -557,14 +561,13 @@ int main(int argc, char** argv){
     /// Create windows
     //cv::namedWindow(image_window, CV_WINDOW_AUTOSIZE);
     //cv::namedWindow(result_window, CV_WINDOW_AUTOSIZE);
-
     // Allocate the memory storage
     storage = cvCreateMemStorage(0);
 
     // resolution
-    capture = cvCaptureFromCAM(0);
-    cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, 600);
-    cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, 600);
+    capture = cvCaptureFromCAM(1);
+    cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, 800);
+    cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, 800);
     // Create a new named window with title: result
     cvNamedWindow("original_frame", 1);
 
